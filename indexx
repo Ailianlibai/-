@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>欢迎来到我的个人网站</title>
+    <style>
+        :root {
+            --bg: #000010;
+            --panel-bg: rgba(10, 15, 30, 0.85);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: var(--bg);
+            overflow: hidden;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            cursor: grab;
+            user-select: none;
+            height: 100vh;
+            width: 100vw;
+            touch-action: pan-x pan-y pinch-zoom;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body:active,
+        body.grabbing {
+            cursor: grabbing;
+        }
+        canvas {
+            display: block;
+        }
+
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at center, #0a0a2e 0%, #000010 100%);
+            z-index: 100;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+        #loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        #loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255, 255, 255, 0.15);
+            border-top-color: #4da6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        #loading-text {
+            color: #b0c8e8;
+            font-size: 1rem;
+            letter-spacing: 0.05em;
+            text-align: center;
+        }
+        #loading-progress {
+            color: #7aa8d8;
+            font-size: 0.8rem;
+            margin-top: 8px;
+            letter-spacing: 0.04em;
+        }
+
+        /* 顶部控制栏 */
+        #top-bar {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            gap: 10px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 36px;
+            padding: 6px 8px;
+            pointer-events: auto;
+        }
+        .view-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.06);
+            color: #bcc8e0;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+            letter-spacing: 0.03em;
+            font-family: inherit;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+        }
+        .view-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: #fff;
+        }
+        .view-btn:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.18);
+        }
+        .view-btn.active {
+            background: rgba(68, 170, 255, 0.25);
+            border-color: rgba(68, 170, 255, 0.6);
+            color: #fff;
+            box-shadow: 0 0 18px rgba(68, 170, 255, 0.25);
+        }
+        .view-btn.sun-active {
+            background: rgba(255, 170, 51, 0.25);
+            border-color: rgba(255, 170, 51, 0.6);
+            box-shadow: 0 0 18px rgba(255, 170, 51, 0.25);
+        }
+        .btn-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .btn-dot.earth {
+            background: #44aaff;
+            box-shadow: 0 0 6px #44aaff;
+        }
+        .btn-dot.sun {
+            background: #ffaa33;
+            box-shadow: 0 0 6px #ffaa33;
+        }
+        .btn-dot.free {
+            background: #88cc88;
+            box-shadow: 0 0 4px #88cc88;
+        }
+
+        #info-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 36px;
+            padding: 8px 18px;
+            color: #b0c0d8;
+            font-size: 0.78rem;
+            letter-spacing: 0.04em;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 768px) {
+            #top-bar {
+                top: 10px;
+                gap: 6px;
+                padding: 4px 6px;
+                border-radius: 30px;
+            }
+            .view-btn {
+                padding: 8px 12px;
+                font-size: 0.72rem;
+                gap: 4px;
+                border-radius: 22px;
+            }
+            .btn-dot {
+                width: 6px;
+                height: 6px;
+            }
+            #info-panel {
+                bottom: 12px;
+                padding: 6px 12px;
+                font-size: 0.68rem;
+                gap: 8px;
+                border-radius: 28px;
+            }
+            #loading-text {
+                font-size: 0.85rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .view-btn {
+                padding: 7px 10px;
+                font-size: 0.68rem;
+                gap: 3px;
+            }
+            #info-panel {
+                font-size: 0.62rem;
+                padding: 5px 10px;
+                gap: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div id="loading-spinner"></div>
+        <div id="loading-text">正在构建太阳系...</div>
+        <div id="loading-progress">0 / 3</div>
+    </div>
+
+    <!-- 顶部视角切换按钮 -->
+    <div id="top-bar">
+        <button id="btn-earth" class="view-btn active" onclick="switchView('earth')">
+            <span class="btn-dot earth"></span> 地球
+        </button>
+        <button id="btn-sun" class="view-btn" onclick="switchView('sun')">
+            <span class="btn-dot sun"></span> 太阳
+        </button>
+        <button id="btn-free" class="view-btn" onclick="switchView('free')">
+            <span class="btn-dot free"></span> 自由
+        </button>
+    </div>
+
+    <div id="info-panel">
+        <span>🖱️ 拖拽旋转</span>
+        <span>🔍 双指缩放</span>
+        <span>🌍 真实地形</span>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // ==================== 超稳定控制器 ====================
+        class RockSolidControls {
+            constructor(camera, domElement) {
+                this.camera = camera;
+                this.domElement = domElement;
+                this.target = new THREE.Vector3();
+                this._lockMode = 'earth';
+                this._earthRef = null;
+
+                this._spherical = new THREE.Spherical(10, Math.PI / 3, 0);
+                this._sphericalDelta = new THREE.Spherical();
+                this.enableDamping = true;
+                this.dampingFactor = 0.03;
+                this.minDistance = 0.8;
+                this.maxDistance = 180;
+                this.maxPolarAngle = Math.PI * 0.92;
+                this.minPolarAngle = 0.005;
+                this.autoRotate = false;
+                this.autoRotateSpeed = 0.12;
+
+                this._state = -1;
+                this._pointers = [];
+                this._prevMouse = new THREE.Vector2();
+                this._mouse = new THREE.Vector2();
+                this._pointerDistance = 0;
+                this._rotateVelocity = new THREE.Vector2();
+                this._zoomVelocity = 0;
+
+                // 超级平滑的target
+                this._smoothTarget = new THREE.Vector3();
+                this._targetVel = new THREE.Vector3();
+
+                const offset = new THREE.Vector3().copy(camera.position).sub(this.target);
+                this._spherical.setFromVector3(offset);
+                this._smoothTarget.set(0, 0, 0);
+                this.target.set(0, 0, 0);
+
+                this._bindEvents();
+            }
+
+            set earthRef(ref) {
+                this._earthRef = ref;
+                if (ref && this._lockMode === 'earth') {
+                    this._smoothTarget.copy(ref.position);
+                    this.target.copy(ref.position);
+                }
+            }
+            set lockMode(mode) {
+                this._lockMode = mode;
+                if (mode === 'earth' && this._earthRef) {
+                    this._smoothTarget.copy(this._earthRef.position);
+                    this.target.copy(this._earthRef.position);
+                } else if (mode === 'sun') {
+                    this._smoothTarget.set(0, 0, 0);
+                    this.target.set(0, 0, 0);
+                }
+            }
+            get lockMode() { return this._lockMode; }
+
+            _bindEvents() {
+                const el = this.domElement;
+                el.addEventListener('pointerdown', (e) => this._onPD(e));
+                el.addEventListener('pointermove', (e) => this._onPM(e));
+                el.addEventListener('pointerup', (e) => this._onPU(e));
+                el.addEventListener('pointercancel', (e) => this._onPU(e));
+                el.addEventListener('wheel', (e) => this._onW(e), { passive: false });
+                el.addEventListener('contextmenu', (e) => e.preventDefault());
+                // 防止双击缩放
+                el.addEventListener('dblclick', (e) => e.preventDefault());
+            }
+
+            _onPD(e) {
+                if (this._pointers.length === 0) this.domElement.setPointerCapture(e.pointerId);
+                this._pointers.push({ id: e.pointerId, x: e.clientX, y: e.clientY });
+                if (this._pointers.length === 1) {
+                    this._state = 0;
+                    this._mouse.set(e.clientX, e.clientY);
+                    this._prevMouse.copy(this._mouse);
+                } else if (this._pointers.length === 2) {
+                    this._state = 3;
+                    this._pointerDistance = Math.hypot(
+                        this._pointers[0].x - this._pointers[1].x,
+                        this._pointers[0].y - this._pointers[1].y
+                    );
+                }
+            }
+
+            _onPM(e) {
+                for (let p of this._pointers) { if (p.id === e.pointerId) { p.x = e.clientX;
+                        p.y = e.clientY; break; } }
+                if (this._pointers.length === 1 && this._state === 0) {
+                    this._mouse.set(e.clientX, e.clientY);
+                } else if (this._pointers.length === 2 && this._state === 3) {
+                    const nd = Math.hypot(
+                        this._pointers[0].x - this._pointers[1].x,
+                        this._pointers[0].y - this._pointers[1].y
+                    );
+                    if (this._pointerDistance > 0) {
+                        this._zoomVelocity += (this._pointerDistance - nd) * 0.006;
+                    }
+                    this._pointerDistance = nd;
+                }
+            }
+
+            _onPU(e) {
+                this._pointers = this._pointers.filter(p => p.id !== e.pointerId);
+                if (this._pointers.length === 0) {
+                    this._state = -1;
+                    this.domElement.releasePointerCapture(e.pointerId);
+                } else if (this._pointers.length === 1) {
+                    this._state = 0;
+                    this._mouse.set(this._pointers[0].x, this._pointers[0].y);
+                    this._prevMouse.copy(this._mouse);
+                }
+            }
+
+            _onW(e) {
+                e.preventDefault();
+                this._zoomVelocity += e.deltaY * 0.001;
+            }
+
+            update(dt = 0.016) {
+                // 锁定模式：极度平滑跟踪
+                if (this._lockMode === 'earth' && this._earthRef) {
+                    const ep = this._earthRef.position;
+                    // 使用极慢的指数平滑
+                    this._smoothTarget.x += (ep.x - this._smoothTarget.x) * 0.04;
+                    this._smoothTarget.y += (ep.y - this._smoothTarget.y) * 0.04;
+                    this._smoothTarget.z += (ep.z - this._smoothTarget.z) * 0.04;
+                    this.target.copy(this._smoothTarget);
+                } else if (this._lockMode === 'sun') {
+                    this._smoothTarget.x += (0 - this._smoothTarget.x) * 0.04;
+                    this._smoothTarget.y += (0 - this._smoothTarget.y) * 0.04;
+                    this._smoothTarget.z += (0 - this._smoothTarget.z) * 0.04;
+                    this.target.copy(this._smoothTarget);
+                }
+
+                // 旋转
+                if (this._state === 0) {
+                    this._rotateVelocity.set(
+                        (this._mouse.x - this._prevMouse.x) * 0.003,
+                        (this._mouse.y - this._prevMouse.y) * 0.003
+                    );
+                } else {
+                    this._rotateVelocity.multiplyScalar(0.82);
+                }
+                this._prevMouse.copy(this._mouse);
+
+                this._sphericalDelta.theta -= this._rotateVelocity.x;
+                this._sphericalDelta.phi -= this._rotateVelocity.y;
+
+                // 缩放
+                this._spherical.radius += this._zoomVelocity;
+                this._spherical.radius = Math.max(this.minDistance, Math.min(this.maxDistance, this._spherical.radius));
+                this._zoomVelocity *= 0.78;
+
+                // 阻尼
+                const damp = this.enableDamping ? (1 - this.dampingFactor) : 1;
+                this._spherical.theta += this._sphericalDelta.theta * damp;
+                this._spherical.phi += this._sphericalDelta.phi * damp;
+                this._sphericalDelta.theta *= this.dampingFactor;
+                this._sphericalDelta.phi *= this.dampingFactor;
+
+                this._spherical.phi = Math.max(this.minPolarAngle, Math.min(this.maxPolarAngle, this._spherical.phi));
+
+                if (this.autoRotate && this._lockMode === 'free') {
+                    this._spherical.theta += this.autoRotateSpeed * 0.002;
+                }
+
+                const offset = new THREE.Vector3().setFromSpherical(this._spherical);
+                this.camera.position.copy(this.target).add(offset);
+                this.camera.lookAt(this.target);
+            }
+
+            snapTo(targetPos, offsetVec = new THREE.Vector3(1.5, 1.5, 5)) {
+                this.target.copy(targetPos);
+                this._smoothTarget.copy(targetPos);
+                const np = targetPos.clone().add(offsetVec);
+                this.camera.position.copy(np);
+                this._spherical.setFromVector3(np.clone().sub(targetPos));
+                this._sphericalDelta.set(0, 0, 0);
+                this._rotateVelocity.set(0, 0);
+                this._zoomVelocity = 0;
+            }
+
+            resetSpherical() {
+                if (this._lockMode === 'earth' && this._earthRef) {
+                    this._spherical.setFromVector3(
+                        this.camera.position.clone().sub(this._earthRef.position)
+                    );
+                } else if (this._lockMode === 'sun') {
+                    this._spherical.setFromVector3(
+                        this.camera.position.clone().sub(new THREE.Vector3(0, 0, 0))
+                    );
+                }
+            }
+        }
+
+        // ==================== DOM ====================
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const loadingProgress = document.getElementById('loading-progress');
+
+        // ==================== 场景 ====================
+        const scene = new THREE.Scene();
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true,
+            powerPreference: 'high-performance'
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.body.appendChild(renderer.domElement);
+
+        const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.08, 900);
+        camera.position.set(0, 3, 10);
+
+        const controls = new RockSolidControls(camera, renderer.domElement);
+
+        // ==================== 星空 ====================
+        function createStarField() {
+            const count = 12000;
+            const pos = new Float32Array(count * 3);
+            const col = new Float32Array(count * 3);
+            const r = 450;
+            for (let i = 0; i < count; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const dist = r + (Math.random() - 0.5) * 140;
+                pos[i * 3] = dist * Math.sin(phi) * Math.cos(theta);
+                pos[i * 3 + 1] = dist * Math.sin(phi) * Math.sin(theta);
+                pos[i * 3 + 2] = dist * Math.cos(phi);
+                const c = Math.random();
+                if (c < 0.025) { col[i * 3] = 0.4;
+                    col[i * 3 + 1] = 0.55;
+                    col[i * 3 + 2] = 1.0; } else if (c < 0.05) { col[i * 3] = 1.0;
+                    col[i * 3 + 1] = 0.6;
+                    col[i * 3 + 2] = 0.3; } else if (c < 0.07) { col[i * 3] = 1.0;
+                    col[i * 3 + 1] = 0.3;
+                    col[i * 3 + 2] = 0.12; } else { const b = 0.5 + Math.random() * 0.5;
+                    col[i * 3] = b;
+                    col[i * 3 + 1] = b;
+                    col[i * 3 + 2] = b; }
+            }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+            const mat = new THREE.PointsMaterial({
+                size: 0.2,
+                vertexColors: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                transparent: true,
+                opacity: 0.9,
+                sizeAttenuation: true
+            });
+            const stars = new THREE.Points(geo, mat);
+            stars.name = 'stars';
+            scene.add(stars);
+            return stars;
+        }
+        const starField = createStarField();
+
+        // ==================== 太阳（1024段 + 体积噪声） ====================
+        const sunGroup = new THREE.Group();
+        sunGroup.name = 'sunGroup';
+        scene.add(sunGroup);
+
+        const sunGeo = new THREE.SphereGeometry(3.5, 1024, 1024);
+        const sunMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 } },
+            vertexShader: `
+                varying vec3 vN; varying vec3 vWP; varying vec2 vUv; varying vec3 vVD;
+                void main() {
+                    vec4 wp = modelMatrix * vec4(position, 1.0);
+                    vWP = wp.xyz; vN = normalize(mat3(modelMatrix) * normal);
+                    vUv = uv; vVD = normalize(cameraPosition - wp.xyz);
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vN; varying vec3 vWP; varying vec2 vUv; varying vec3 vVD;
+                uniform float uTime;
+                
+                float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+                float hash31(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123); }
+                
+                float noise(vec2 p) {
+                    vec2 i = floor(p); vec2 f = fract(p);
+                    f = f*f*(3.0-2.0*f);
+                    return mix(mix(hash21(i), hash21(i+vec2(1,0)), f.x),
+                               mix(hash21(i+vec2(0,1)), hash21(i+vec2(1,1)), f.x), f.y);
+                }
+                float noise3D(vec3 p) {
+                    vec3 i = floor(p); vec3 f = fract(p);
+                    f = f*f*(3.0-2.0*f);
+                    return mix(mix(mix(hash31(i), hash31(i+vec3(1,0,0)), f.x),
+                                   mix(hash31(i+vec3(0,1,0)), hash31(i+vec3(1,1,0)), f.x), f.y),
+                               mix(mix(hash31(i+vec3(0,0,1)), hash31(i+vec3(1,0,1)), f.x),
+                                   mix(hash31(i+vec3(0,1,1)), hash31(i+vec3(1,1,1)), f.x), f.y), f.z);
+                }
+                
+                float fbm(vec2 p) {
+                    float v=0.0, a=0.55, f=1.0;
+                    for(int i=0;i<10;i++){ v+=a*noise(p*f); f*=2.1; a*=0.46; }
+                    return v;
+                }
+                float fbmFine(vec2 p) {
+                    float v=0.0, a=0.5, f=1.0;
+                    for(int i=0;i<14;i++){ v+=a*noise(p*f); f*=2.05; a*=0.48; }
+                    return v;
+                }
+                float turbulence(vec2 p) {
+                    float v=0.0, a=0.5, f=1.0;
+                    for(int i=0;i<8;i++){ v+=a*abs(noise(p*f)*2.0-1.0); f*=2.0; a*=0.5; }
+                    return v;
+                }
+                float ridge(vec2 p) {
+                    float v=0.0, a=0.5, f=1.0;
+                    for(int i=0;i<8;i++){ float n=abs(noise(p*f)*2.0-1.0); v+=a*(1.0-n); f*=2.1; a*=0.46; }
+                    return v;
+                }
+                float worley(vec2 p) {
+                    vec2 i=floor(p); vec2 f=fract(p);
+                    float md=1.0, md2=1.0;
+                    for(int x=-1;x<=1;x++){
+                        for(int y=-1;y<=1;y++){
+                            vec2 nv=vec2(float(x),float(y));
+                            vec2 pt=vec2(hash21(i+nv), hash21(i+nv+vec2(31,17)));
+                            float d=length(nv+pt-f);
+                            if(d<md){ md2=md; md=d; } else if(d<md2){ md2=d; }
+                        }
+                    }
+                    return md2-md;
+                }
+                float convectionNoise(vec2 uv, float time) {
+                    float v=0.0;
+                    for(int i=0;i<5;i++){
+                        float fi=float(i);
+                        vec3 p=vec3(uv*3.0*fi, time*0.3+fi);
+                        v+=noise3D(p)/(fi+1.0);
+                    }
+                    return v;
+                }
+
+                void main() {
+                    vec3 n=normalize(vN);
+                    vec3 vDir=normalize(vVD);
+                    vec2 uv=vUv;
+                    float t=uTime*0.003;
+
+                    float n1=fbm(uv*9.0+t);
+                    float n2=fbm(uv*18.0-t*1.1);
+                    float n3=turbulence(uv*8.0+t*0.3);
+                    float n4=fbmFine(uv*30.0+t*1.3);
+                    float n5=ridge(uv*11.0+t*0.22);
+                    float n6=fbm(uv*60.0+t*0.6);
+                    float n7=fbmFine(uv*50.0-t*0.5);
+                    float w1=worley(uv*18.0+t*0.12);
+                    float w2=worley(uv*36.0-t*0.3);
+                    float conv=convectionNoise(uv,t);
+
+                    float granules=fbmFine(uv*42.0+t*0.4);
+                    float granulePattern=smoothstep(0.24,0.76,granules);
+                    float superGran=worley(uv*10.0+t*0.05);
+                    float superGranPattern=smoothstep(0.26,0.64,superGran)*0.2;
+
+                    float spotField=fbm(uv*16.0+t*0.06);
+                    float spotDetail=fbm(uv*26.0-t*0.1);
+                    float spotMask=smoothstep(0.74,0.82,spotField)*smoothstep(0.86,0.79,spotField);
+                    spotMask*=smoothstep(0.3,0.56,spotDetail);
+                    float penumbraMask=smoothstep(0.64,0.74,spotField)*smoothstep(0.88,0.8,spotField)*smoothstep(0.26,0.56,spotDetail);
+                    penumbraMask=max(penumbraMask-spotMask,0.0);
+
+                    float faculae=smoothstep(0.54,0.74,n4)*smoothstep(0.52,0.42,n1);
+                    faculae*=(1.0-spotMask*0.8);
+
+                    float chromNet=ridge(uv*10.0+t*0.16);
+                    float filaments=smoothstep(0.46,0.7,chromNet)*0.25;
+                    float spicules=ridge(uv*22.0+t*0.35)*0.1;
+                    float volEffect=conv*0.08;
+
+                    vec3 brightCore=vec3(1.0,0.97,0.92);
+                    vec3 photosphere=vec3(1.0,0.9,0.58);
+                    vec3 warmRegion=vec3(1.0,0.73,0.24);
+                    vec3 coolRegion=vec3(0.97,0.53,0.13);
+                    vec3 umbraColor=vec3(0.38,0.13,0.02);
+                    vec3 penumbraCol=vec3(0.64,0.28,0.06);
+
+                    vec3 col=mix(photosphere,brightCore,n1*0.65);
+                    col=mix(col,warmRegion,n3*0.26);
+                    col=mix(col,coolRegion,n5*0.18);
+                    col=mix(col,brightCore,granulePattern*0.45);
+                    col+=superGranPattern*vec3(0.03,0.02,0.01);
+                    col+=(granulePattern-0.5)*0.09;
+                    col+=spicules*vec3(0.05,0.03,0.01);
+                    col+=volEffect;
+                    col=mix(col,penumbraCol,penumbraMask*0.72);
+                    col=mix(col,umbraColor,spotMask*0.94);
+                    col+=faculae*vec3(0.24,0.18,0.09)*0.36;
+                    col-=filaments*vec3(0.06,0.04,0.02);
+                    col+=n7*0.02;
+
+                    float fresnel=1.0-abs(dot(vDir,n));
+                    float limbDark=1.0-pow(fresnel,2.2)*0.66;
+                    col*=limbDark;
+                    col+=pow(fresnel,1.4)*vec3(0.24,-0.01,-0.16);
+
+                    float bSpot=smoothstep(0.75,0.8,n2)*smoothstep(0.74,0.54,n1);
+                    bSpot*=(1.0-spotMask);
+                    col+=bSpot*vec3(0.35,0.28,0.16)*0.24;
+
+                    col=clamp(col,0.0,1.0);
+                    gl_FragColor=vec4(col,1.0);
+                }
+            `,
+        });
+        const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+        sunMesh.name = 'sunBody';
+        sunGroup.add(sunMesh);
+
+        // 日珥粒子
+        const promCount = 3500;
+        const promGeo = new THREE.BufferGeometry();
+        const promPos = new Float32Array(promCount * 3);
+        const promCol = new Float32Array(promCount * 3);
+        const promData = [];
+        for (let i = 0; i < promCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = 3.51;
+            promPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+            promPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            promPos[i * 3 + 2] = r * Math.cos(phi);
+            const c = Math.random();
+            if (c < 0.28) { promCol[i * 3] = 1.0;
+                promCol[i * 3 + 1] = 0.26;
+                promCol[i * 3 + 2] = 0.02; } else if (c < 0.62) { promCol[i * 3] = 1.0;
+                promCol[i * 3 + 1] = 0.48;
+                promCol[i * 3 + 2] = 0.08; } else { promCol[i * 3] = 1.0;
+                promCol[i * 3 + 1] = 0.76;
+                promCol[i * 3 + 2] = 0.3; }
+            const dir = new THREE.Vector3(promPos[i * 3], promPos[i * 3 + 1], promPos[i * 3 + 2]).normalize();
+            promData.push({ dir, speed: 0.06 + Math.random() * 0.8, life: Math.random() * Math.PI * 2, maxH: 0.12 + Math
+                    .random() * 6.5, freq: 0.1 + Math.random() * 0.4, phase: Math.random() * Math.PI * 2 });
+        }
+        promGeo.setAttribute('position', new THREE.BufferAttribute(promPos, 3));
+        promGeo.setAttribute('color', new THREE.BufferAttribute(promCol, 3));
+        const promMat = new THREE.PointsMaterial({ size: 0.05, vertexColors: true, blending: THREE.AdditiveBlending,
+            depthWrite: false, transparent: true, opacity: 0.55, sizeAttenuation: true });
+        const promParticles = new THREE.Points(promGeo, promMat);
+        sunGroup.add(promParticles);
+
+        // 日冕
+        const corCount = 1500;
+        const corGeo = new THREE.BufferGeometry();
+        const corPos = new Float32Array(corCount * 3);
+        const corCol = new Float32Array(corCount * 3);
+        const corData = [];
+        for (let i = 0; i < corCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = 3.6 + Math.random() * 9;
+            corPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+            corPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            corPos[i * 3 + 2] = r * Math.cos(phi);
+            const c = Math.random();
+            if (c < 0.18) { corCol[i * 3] = 1.0;
+                corCol[i * 3 + 1] = 0.88;
+                corCol[i * 3 + 2] = 0.5; } else if (c < 0.55) { corCol[i * 3] = 1.0;
+                corCol[i * 3 + 1] = 0.38;
+                corCol[i * 3 + 2] = 0.07; } else { corCol[i * 3] = 1.0;
+                corCol[i * 3 + 1] = 0.18;
+                corCol[i * 3 + 2] = 0.02; }
+            const dir = new THREE.Vector3(corPos[i * 3], corPos[i * 3 + 1], corPos[i * 3 + 2]).normalize();
+            corData.push({ dir, speed: 0.015 + Math.random() * 0.3, life: Math.random() * Math.PI * 2, baseR: r });
+        }
+        corGeo.setAttribute('position', new THREE.BufferAttribute(corPos, 3));
+        corGeo.setAttribute('color', new THREE.BufferAttribute(corCol, 3));
+        const corMat = new THREE.PointsMaterial({ size: 0.16, vertexColors: true, blending: THREE.AdditiveBlending,
+            depthWrite: false, transparent: true, opacity: 0.24, sizeAttenuation: true });
+        const corParticles = new THREE.Points(corGeo, corMat);
+        sunGroup.add(corParticles);
+
+        const sunLight = new THREE.PointLight(0xfff8e7, 280, 500, 0.7);
+        sunLight.position.set(0, 0, 0);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.08;
+        sunLight.shadow.camera.far = 500;
+        sunLight.shadow.bias = -0.00001;
+        sunGroup.add(sunLight);
+
+        scene.add(new THREE.AmbientLight(0x1a2a4a, 3.2));
+        scene.add(new THREE.HemisphereLight(0x8899cc, 0x111133, 1.2));
+
+        // ==================== 行星系统 ====================
+        const speedScale = 0.04;
+        const planetData = [
+            { name: '水星', size: 0.36, orbit: 8, speed: 4.15 * speedScale, tilt: 0.03, type: 'mercury', c1: '#bababa',
+                c2: '#6e6e6e', seg: 120 },
+            { name: '金星', size: 0.68, orbit: 12, speed: 3.0 * speedScale, tilt: 2.64, type: 'venus', c1: '#f5e6c8',
+                c2: '#c0b090', seg: 140 },
+            { name: '地球', size: 0.68, orbit: 17, speed: 2.0 * speedScale, tilt: 0.41, type: 'earth', c1: '#4488ff',
+                c2: '#2255cc', seg: 200, isEarth: true },
+            { name: '火星', size: 0.48, orbit: 23, speed: 1.6 * speedScale, tilt: 0.44, type: 'mars', c1: '#c1442a',
+                c2: '#6e1a0a', seg: 130 },
+            { name: '木星', size: 3.8, orbit: 35, speed: 0.9 * speedScale, tilt: 0.05, type: 'jupiter', c1: '#d4b896',
+                c2: '#9a7858', seg: 180 },
+            { name: '土星', size: 3.2, orbit: 50, speed: 0.65 * speedScale, tilt: 0.47, type: 'saturn', c1: '#e8cfa0',
+                c2: '#b09058', seg: 170, hasRings: true },
+            { name: '天王星', size: 2.3, orbit: 66, speed: 0.45 * speedScale, tilt: 1.71, type: 'uranus', c1: '#9ec8e0',
+                c2: '#4e7a94', seg: 130 },
+            { name: '海王星', size: 2.2, orbit: 80, speed: 0.35 * speedScale, tilt: 0.49, type: 'neptune', c1: '#4b70dd',
+                c2: '#142a8a', seg: 130 },
+        ];
+
+        const planets = [];
+
+        function createOrbitLine(radius, color = 0x445577, opacity = 0.15) {
+            const pts = [];
+            for (let i = 0; i <= 700; i++) { const a = (i / 700) * Math.PI * 2;
+                pts.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius)); }
+            const geo = new THREE.BufferGeometry().setFromPoints(pts);
+            const mat = new THREE.LineDashedMaterial({ color, transparent: true, opacity, depthWrite: false, dashSize: 0.8,
+                gapSize: 0.5 });
+            const line = new THREE.Line(geo, mat);
+            line.computeLineDistances();
+            scene.add(line);
+        }
+        planetData.forEach(d => createOrbitLine(d.orbit, d.isEarth ? 0x44aaff : 0x445577, d.isEarth ? 0.34 : 0.15));
+
+        function createPlanetMat(type, c1, c2) {
+            const baseShader = (frag) => new THREE.ShaderMaterial({
+                uniforms: { uTime: { value: 0 }, uC1: { value: new THREE.Color(c1) }, uC2: { value: new THREE.Color(
+                        c2) } },
+                vertexShader: `varying vec2 vUv; varying vec3 vN; varying vec3 vWP;
+                    void main() { vUv=uv; vN=normalize(normalMatrix*normal); vec4 wp=modelMatrix*vec4(position,1.0); vWP=wp.xyz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+                fragmentShader: `varying vec2 vUv; varying vec3 vN; varying vec3 vWP; uniform float uTime; uniform vec3 uC1,uC2;
+                    float h(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+                    float n(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.0-2.0*f);
+                        return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y); }
+                    float fbm(vec2 p){ float v=0.0,a=0.55,fr=1.0; for(int i=0;i<8;i++){ v+=a*n(p*fr); fr*=2.1; a*=0.48; } return v; }
+                    float fbm2(vec2 p){ float v=0.0,a=0.5,fr=1.0; for(int i=0;i<10;i++){ v+=a*n(p*fr); fr*=2.0; a*=0.5; } return v; }
+                    float worley(vec2 p){ vec2 i=floor(p),f=fract(p); float md=1.0;
+                        for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++){ vec2 nv=vec2(float(x),float(y)); vec2 pt=vec2(h(i+nv),h(i+nv+vec2(31,17))); md=min(md,length(nv+pt-f)); } return md; }
+                    ${frag}`,
+            });
+
+            switch (type) {
+                case 'mercury':
+                    return baseShader(
+                        `void main(){ float n1=fbm(vUv*8.0); float n2=fbm2(vUv*14.0); float w=worley(vUv*9.0); float craters=smoothstep(0.32,0.58,w); vec3 c=mix(uC1,uC2,n1); c=mix(c,uC2*0.55,craters*0.55); c+=n2*0.05; float f=pow(1.0-abs(dot(vN,vec3(0,0,1))),2.4); c*=1.0-f*0.22; gl_FragColor=vec4(c,1.0); }`
+                        );
+                case 'venus':
+                    return baseShader(
+                        `void main(){ float n1=fbm(vUv*6.0); float sw=fbm(vUv*9.0+uTime*0.006); float d=fbm2(vUv*16.0); vec3 c=mix(vec3(0.97,0.91,0.8),vec3(0.84,0.74,0.53),n1); c=mix(c,vec3(0.93,0.86,0.72),sw*0.55); c+=d*0.035; float f=pow(1.0-abs(dot(vN,vec3(0,0,1))),2.0); c*=1.0-f*0.1; gl_FragColor=vec4(c,1.0); }`
+                        );
+                case 'mars':
+                    return baseShader(
+                        `void main(){ float n1=fbm(vUv*7.0); float n2=fbm2(vUv*12.0); float w=worley(vUv*8.0); float craters=smoothstep(0.28,0.52,w); float polar=smoothstep(0.84,0.96,abs(vUv.y-0.5)*2.0); vec3 c=mix(vec3(0.8,0.3,0.16),vec3(0.46,0.07,0.02),n1); c=mix(c,vec3(0.32,0.04,0.01),craters*0.45); c=mix(c,vec3(0.96,0.92,0.88),polar*0.55); c+=n2*0.05; float f=pow(1.0-abs(dot(vN,vec3(0,0,1))),2.3); c*=1.0-f*0.22; gl_FragColor=vec4(c,1.0); }`
+                        );
+                case 'jupiter':
+                    return baseShader(
+                        `void main(){ float n1=fbm(vUv*10.0+uTime*0.004); float n2=fbm2(vUv*18.0-uTime*0.006); float bands=smoothstep(0.2,0.8,sin(vUv.y*50.0+n1*8.0+n2*6.0)*0.5+0.5); float turb=fbm(vUv*8.0+uTime*0.003)*0.5; float d=fbm2(vUv*28.0)*0.14; float spotD=length(vUv-vec2(0.54,0.5)); float spot=smoothstep(0.15,0.06,spotD)*smoothstep(0.03,0.06,spotD); float spot2=length(vUv-vec2(0.32,0.63)); float spot2m=smoothstep(0.07,0.02,spot2)*0.5; float spot3=length(vUv-vec2(0.7,0.4)); float spot3m=smoothstep(0.05,0.015,spot3)*0.35; vec3 c=mix(vec3(0.88,0.74,0.55),vec3(0.66,0.42,0.22),bands); c=mix(c,vec3(0.93,0.84,0.68),turb); c+=d; c=mix(c,vec3(0.87,0.35,0.18),spot*0.72); c=mix(c,vec3(0.92,0.72,0.52),spot2m); c=mix(c,vec3(0.8,0.5,0.3),spot3m); float f=pow(1.0-abs(dot(vN,vec3(0,0,1))),2.0); c*=1.0-f*0.13; gl_FragColor=vec4(c,1.0); }`
+                        );
+                case 'saturn':
+                    return baseShader(
+                        `void main(){ float n1=fbm(vUv*8.0); float n2=fbm2(vUv*14.0); float bands=smoothstep(0.2,0.8,sin(vUv.y*30.0+n1*6.0)*0.5+0.5); float hex=smoothstep(0.73,0.86,sin(vUv.x*22.0)*sin(vUv.y*22.0)); vec3 c=mix(vec3(0.97,0.88,0.7),vec3(0.74,0.6,0.36),bands); c=mix(c,vec3(0.91,0.78,0.55),n1*0.38); c+=n2*0.035; c=mix(c,vec3(0.86,0.82,0.73),hex*0.2); float f=pow(1.0-abs(dot(vN,vec3(0,0,1))),2.0); c*=1.0-f*0.15; gl_FragColor=vec4(c,1.0); }`
+                        );
+                case 'uranus':
+                    return baseShader(
+                        `void main(){ float n1=fbm(vUv*6.0); float bands=smoothstep(0.28,0.72,sin(vUv.y*18.0+n1*4.0)*0.5+0.5); float d=fbm2(vUv*13.0)*0.2; vec3 c=mix(vec3(0.62,0.78,0.9),vec3(0.42,0.58,0.7),bands*0.45+n1*0.42); c+=d; float f=pow(1.0-abs(dot(vN,vec3(0,0,1))),2.0); c*=1.0-f*0.11; gl_FragColor=vec4(c,1.0); }`
+                        );
+                case 'neptune':
+                    return baseShader(
+                        `void main(){ float n1=fbm(vUv*5.5); float bands=smoothstep(0.3,0.7,sin(vUv.y*16.0+n1*3.5)*0.5+0.5); float d=fbm2(vUv*12.0)*0.22; float spot=length(vUv-vec2(0.58,0.44)); float spotM=smoothstep(0.09,0.02,spot)*0.4; vec3 c=mix(vec3(0.28,0.44,0.9),vec3(0.13,0.18,0.52),bands*0.5+n1*0.42); c+=d; c=mix(c,vec3(0.18,0.28,0.72),spotM); float f=pow(1.0-abs(dot(vN,vec3(0,0,1))),2.0); c*=1.0-f*0.11; gl_FragColor=vec4(c,1.0); }`
+                        );
+                default:
+                    return new THREE.MeshStandardMaterial({ color: c1, roughness: 0.6, metalness: 0.05 });
+            }
+        }
+
+        planetData.forEach(data => {
+            const g = new THREE.Group();
+            g.name = data.name;
+            g.userData = { orbit: data.orbit, speed: data.speed, tilt: data.tilt, angle: Math.random() * Math.PI * 2 };
+            const geo = new THREE.SphereGeometry(data.size, data.seg, data.seg);
+            const mat = data.isEarth ? new THREE.MeshStandardMaterial({ color: 0x4488ff, roughness: 0.5 }) :
+                createPlanetMat(data.type, data.c1, data.c2);
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            mesh.name = data.name + 'Body';
+            g.add(mesh);
+
+            if (data.hasRings) {
+                const rg = new THREE.TorusGeometry(data.size * 1.35, data.size * 0.1, 72, 220);
+                const rm = new THREE.ShaderMaterial({
+                    uniforms: { uTime: { value: 0 } },
+                    vertexShader: `varying vec2 vUv; varying vec3 vP; void main(){ vUv=uv; vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+                    fragmentShader: `varying vec2 vUv; varying vec3 vP; uniform float uTime;
+                        void main(){ float r=length(vP.xy); float a=atan(vP.y,vP.x);
+                        float bands=smoothstep(0.18,0.82,sin(r*10.0+a*7.0)*0.5+0.5);
+                        float detail=smoothstep(0.38,0.62,sin(r*20.0-a*4.0)*0.5+0.5)*0.35;
+                        vec3 c=mix(vec3(0.9,0.84,0.65),vec3(0.63,0.5,0.3),bands); c=mix(c,vec3(0.82,0.72,0.5),0.38); c+=detail;
+                        gl_FragColor=vec4(c,0.9); }`,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                });
+                const ring = new THREE.Mesh(rg, rm);
+                ring.rotation.x = Math.PI * 0.48;
+                ring.name = 'saturnRing';
+                g.add(ring);
+
+                const rg2 = new THREE.TorusGeometry(data.size * 1.72, data.size * 0.03, 52, 170);
+                const rm2 = new THREE.MeshStandardMaterial({ color: 0xc8b080, roughness: 0.4, metalness: 0.2, side: THREE
+                        .DoubleSide, transparent: true, opacity: 0.36 });
+                const ring2 = new THREE.Mesh(rg2, rm2);
+                ring2.rotation.copy(ring.rotation);
+                ring2.name = 'saturnRingOuter';
+                g.add(ring2);
+            }
+
+            g.rotation.x = data.tilt;
+            scene.add(g);
+            planets.push(g);
+            if (data.isEarth) controls.earthRef = g;
+        });
+
+        const earthPlanetRef = planets.find(p => p.name === '地球');
+
+        // ==================== 卫星系统 ====================
+        const moonGroups = [];
+        const moonSpeedScale = 0.03;
+
+        function createMoon(parent, data) {
+            const orbit = new THREE.Group();
+            orbit.name = data.name + 'Orbit';
+            orbit.userData = { angle: Math.random() * Math.PI * 2, speed: data.speed * moonSpeedScale };
+            const seg = data.name === '月球' ? 110 : 70;
+            const geo = new THREE.SphereGeometry(data.size, seg, seg);
+            let mat;
+            if (data.name === '月球') {
+                mat = new THREE.ShaderMaterial({
+                    uniforms: { uTime: { value: 0 } },
+                    vertexShader: `varying vec2 vUv; varying vec3 vN; void main() { vUv=uv; vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+                    fragmentShader: `
+                        varying vec2 vUv; varying vec3 vN; uniform float uTime;
+                        float h(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+                        float n(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.0-2.0*f);
+                            return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y); }
+                        float fbm(vec2 p){ float v=0.0,a=0.55,fr=1.0; for(int i=0;i<8;i++){ v+=a*n(p*fr); fr*=2.1; a*=0.48; } return v; }
+                        float worley(vec2 p){ vec2 i=floor(p),f=fract(p); float md=1.0;
+                            for(int x=-1;x<=1;x++) for(int y=-1;y<=1;y++){ vec2 nv=vec2(float(x),float(y)); vec2 pt=vec2(h(i+nv),h(i+nv+vec2(31,17))); md=min(md,length(nv+pt-f)); } return md; }
+                        void main() {
+                            float n1=fbm(vUv*8.0); float n2=fbm(vUv*16.0);
+                            float w=worley(vUv*7.0); float craters=smoothstep(0.28,0.58,w);
+                            float maria=smoothstep(0.32,0.68,fbm(vUv*5.0));
+                            vec3 highland=vec3(0.8,0.78,0.74); vec3 mare=vec3(0.53,0.51,0.48); vec3 craterCol=vec3(0.87,0.85,0.82);
+                            vec3 c=mix(highland,mare,maria*0.65);
+                            c=mix(c,craterCol,craters*0.45);
+                            c+=n2*0.035;
+                            float f=pow(1.0-abs(dot(vN,vec3(0,0,1))),2.6); c*=1.0-f*0.28;
+                            gl_FragColor=vec4(c,1.0);
+                        }
+                    `,
+                });
+            } else if (data.name.includes('木卫')) {
+                mat = new THREE.ShaderMaterial({
+                    uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(data.color) } },
+                    vertexShader: `varying vec2 vUv; varying vec3 vN; void main() { vUv=uv; vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+                    fragmentShader: `varying vec2 vUv; varying vec3 vN; uniform float uTime; uniform vec3 uColor;
+                        float h(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+                        float n(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.0-2.0*f);
+                            return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y); }
+                        float fbm(vec2 p){ float v=0.0,a=0.5,fr=1.0; for(int i=0;i<6;i++){ v+=a*n(p*fr); fr*=2.1; a*=0.5; } return v; }
+                        void main() { float n1=fbm(vUv*7.0); float streaks=fbm(vUv*9.0+uTime*0.003); vec3 c=mix(uColor*0.75,uColor,n1); c+=streaks*0.06; float f=pow(1.0-abs(dot(vN,vec3(0,0,1))),2.3); c*=1.0-f*0.22; gl_FragColor=vec4(c,1.0); }`,
+                });
+            } else if (data.name === '土卫六') {
+                mat = new THREE.ShaderMaterial({
+                    uniforms: { uTime: { value: 0 } },
+                    vertexShader: `varying vec2 vUv; varying vec3 vN; void main() { vUv=uv; vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+                    fragmentShader: `varying vec2 vUv; varying vec3 vN; uniform float uTime;
+                        float h(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+                        float n(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.0-2.0*f);
+                            return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y); }
+                        float fbm(vec2 p){ float v=0.0,a=0.5,fr=1.0; for(int i=0;i<7;i++){ v+=a*n(p*fr); fr*=2.0; a*=0.5; } return v; }
+                        void main() { float n1=fbm(vUv*6.0); float haze=fbm(vUv*8.0+uTime*0.0015); vec3 c=mix(vec3(0.88,0.68,0.42),vec3(0.68,0.48,0.28),n1); c=mix(c,vec3(0.92,0.77,0.52),haze*0.45); float f=pow(1.0-abs(dot(vN,vec3(0,0,1))),2.0); c*=1.0-f*0.14; gl_FragColor=vec4(c,1.0); }`,
+                });
+            } else {
+                mat = new THREE.MeshStandardMaterial({ color: data.color, roughness: 0.7, metalness: 0.02 });
+            }
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.castShadow = true;
+            mesh.name = data.name + 'Body';
+            mesh.position.set(data.orbitR, 0, 0);
+            orbit.add(mesh);
+            parent.add(orbit);
+            moonGroups.push({ orbit, moon: mesh, speed: data.speed * moonSpeedScale, name: data.name });
+        }
+
+        if (earthPlanetRef) createMoon(earthPlanetRef, { name: '月球', color: 0xcccccc, size: 0.21, orbitR: 1.35, speed: 5.5 });
+        const jp = planets.find(p => p.name === '木星');
+        if (jp) {
+            createMoon(jp, { name: '木卫一', color: 0xddcc88, size: 0.28, orbitR: 4.5, speed: 4.0 });
+            createMoon(jp, { name: '木卫二', color: 0xccdddd, size: 0.26, orbitR: 5.8, speed: 3.2 });
+            createMoon(jp, { name: '木卫三', color: 0xbbccbb, size: 0.36, orbitR: 7.6, speed: 2.5 });
+            createMoon(jp, { name: '木卫四', color: 0x999999, size: 0.32, orbitR: 9.5, speed: 1.8 });
+        }
+        const sp = planets.find(p => p.name === '土星');
+        if (sp) createMoon(sp, { name: '土卫六', color: 0xddaa66, size: 0.33, orbitR: 4.5, speed: 2.2 });
+        const mp = planets.find(p => p.name === '火星');
+        if (mp) {
+            createMoon(mp, { name: '火卫一', color: 0x999988, size: 0.1, orbitR: 1.2, speed: 7.5 });
+            createMoon(mp, { name: '火卫二', color: 0x888877, size: 0.08, orbitR: 1.7, speed: 5.0 });
+        }
+
+        // ==================== 地球纹理 ====================
+        const texLoader = new THREE.TextureLoader();
+        let texLoaded = 0;
+
+        function progTex() { texLoaded++;
+            loadingProgress.textContent = `${texLoaded} / 3`; if (texLoaded >= 3) { loadingText.textContent = '完成...';
+                setTimeout(() => loadingOverlay.classList.add('hidden'), 600); } }
+        const dayP = new Promise(r => texLoader.load(
+            'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+            t => { t.colorSpace = THREE.SRGBColorSpace;
+                t.anisotropy = 16;
+                t.minFilter = THREE.LinearMipmapLinearFilter;
+                t.magFilter = THREE.LinearFilter;
+                progTex();
+                r(t); }, undefined, () => { progTex();
+                r(null); }));
+        const nightP = new Promise(r => texLoader.load('https://unpkg.com/three-globe/example/img/earth-night.jpg',
+            t => { t.colorSpace = THREE.SRGBColorSpace;
+                t.anisotropy = 16;
+                t.minFilter = THREE.LinearMipmapLinearFilter;
+                t.magFilter = THREE.LinearFilter;
+                progTex();
+                r(t); }, undefined, () => { progTex();
+                r(null); }));
+        const dispP = new Promise(r => texLoader.load('https://unpkg.com/three-globe/example/img/earth-topology.png',
+            t => { t.colorSpace = THREE.LinearSRGBColorSpace;
+                t.anisotropy = 16;
+                t.minFilter = THREE.LinearMipmapLinearFilter;
+                t.magFilter = THREE.LinearFilter;
+                progTex();
+                r(t); }, undefined, () => { progTex();
+                r(null); }));
+
+        async function upgradeEarth() {
+            const [day, night, disp] = await Promise.all([dayP, nightP, dispP]);
+            if (!earthPlanetRef) return;
+            const mesh = earthPlanetRef.children.find(c => c.isMesh && c.name === '地球Body');
+            if (!mesh) return;
+            const r = 0.68;
+            mesh.material = new THREE.ShaderMaterial({
+                uniforms: { uDay: { value: day }, uNight: { value: night }, uDisp: { value: disp }, uLightPos: { value: new THREE
+                            .Vector3(0, 0, 0) }, uDispScale: { value: 0.14 }, uAmb: { value: new THREE.Color(0x2a3f5a) },
+                    uLightCol: { value: new THREE.Color(0xfff4e0) }, uSoft: { value: 0.42 }, uSpecStr: { value: 0.32 },
+                    uSpecPow: { value: 42.0 } },
+                vertexShader: `varying vec2 vUv; varying vec3 vN; varying vec3 vWP; varying vec3 vVD; varying float vD;
+                    uniform sampler2D uDisp; uniform float uDispScale;
+                    void main(){ vUv=uv; float d=texture2D(uDisp,uv).r; vD=d;
+                    vec3 dp=position+normal*d*uDispScale; vec4 wp=modelMatrix*vec4(dp,1.0);
+                    vWP=wp.xyz; vN=normalize(mat3(modelMatrix)*normal); vVD=normalize(cameraPosition-wp.xyz);
+                    gl_Position=projectionMatrix*modelViewMatrix*vec4(dp,1.0); }`,
+                fragmentShader: `varying vec2 vUv; varying vec3 vN; varying vec3 vWP; varying vec3 vVD; varying float vD;
+                    uniform sampler2D uDay,uNight; uniform vec3 uLightPos,uAmb,uLightCol; uniform float uSoft,uSpecStr,uSpecPow;
+                    void main(){ vec3 n=normalize(vN),lDir=normalize(uLightPos-vWP),vDir=normalize(vVD);
+                        float NdotL=dot(n,lDir),dayF=smoothstep(-uSoft,uSoft,NdotL);
+                        vec4 dayC=texture2D(uDay,vUv),nightC=texture2D(uNight,vUv);
+                        float diff=max(NdotL,0.0)*0.85+0.15; vec3 lit=dayC.rgb*uLightCol*diff;
+                        float pen=smoothstep(-0.3,0.44,NdotL); lit*=0.5+0.5*pen;
+                        vec3 nightG=nightC.rgb*3.0; float nF=1.0-dayF; nightG*=(0.9+0.1*vec3(1.0,0.85,0.7));
+                        vec3 base=mix(nightG,lit,dayF); base+=uAmb*2.4;
+                        vec3 hV=normalize(lDir+vDir); float spec=pow(max(dot(n,hV),0.0),uSpecPow);
+                        float oMask=1.0-smoothstep(0.02,0.32,vD); spec*=(0.18+0.82*oMask)*uSpecStr*dayF;
+                        vec3 col=base+spec*uLightCol*0.65;
+                        col+=exp(-abs(NdotL)/0.22)*0.16*vec3(1.0,0.46,0.16);
+                        float rim=1.0-abs(dot(n,vDir)); rim=pow(rim,6.0)*0.24;
+                        col+=rim*vec3(0.36,0.56,1.0)*nF;
+                        gl_FragColor=vec4(col,1.0); }`,
+            });
+            const atmoGeo = new THREE.SphereGeometry(r * 1.14, 110, 110);
+            const atmoMat = new THREE.ShaderMaterial({
+                uniforms: { uSunPos: { value: new THREE.Vector3(0, 0, 0) }, uAtmoCol: { value: new THREE.Color(0x4488cc) } },
+                vertexShader: `varying vec3 vN; varying vec3 vWP; varying vec3 vVD;
+                    void main(){ vec4 wp=modelMatrix*vec4(position,1.0); vWP=wp.xyz; vN=normalize(mat3(modelMatrix)*normal); vVD=normalize(cameraPosition-wp.xyz); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+                fragmentShader: `varying vec3 vN; varying vec3 vWP; varying vec3 vVD; uniform vec3 uSunPos,uAtmoCol;
+                    void main(){ vec3 n=normalize(vN),vDir=normalize(vVD),sDir=normalize(uSunPos-vWP);
+                    float fres=1.0-abs(dot(vDir,n)); fres=pow(fres,4.2);
+                    float sInf=dot(n,sDir),edge=fres*(0.2+0.8*smoothstep(-0.2,0.5,sInf));
+                    gl_FragColor=vec4(uAtmoCol,edge*0.7); }`,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending,
+            });
+            const atmo = new THREE.Mesh(atmoGeo, atmoMat);
+            atmo.renderOrder = 1;
+            atmo.material.depthWrite = false;
+            atmo.name = 'atmosphere';
+            earthPlanetRef.add(atmo);
+        }
+        upgradeEarth().catch(() => {});
+
+        // ==================== 全局视角切换函数 ====================
+        window.switchView = function(mode) {
+            // 更新按钮状态
+            document.getElementById('btn-earth').classList.remove('active', 'sun-active');
+            document.getElementById('btn-sun').classList.remove('active', 'sun-active');
+            document.getElementById('btn-free').classList.remove('active', 'sun-active');
+
+            if (mode === 'earth') {
+                document.getElementById('btn-earth').classList.add('active');
+                controls.lockMode = 'earth';
+                controls.autoRotate = false;
+                if (earthPlanetRef) controls.snapTo(earthPlanetRef.position, new THREE.Vector3(1.5, 1.5, 5));
+            } else if (mode === 'sun') {
+                document.getElementById('btn-sun').classList.add('active', 'sun-active');
+                controls.lockMode = 'sun';
+                controls.autoRotate = false;
+                controls.snapTo(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 7, 24));
+            } else {
+                document.getElementById('btn-free').classList.add('active');
+                controls.lockMode = 'free';
+            }
+        };
+
+        // ==================== 动画循环 ====================
+        const clock = new THREE.Clock();
+        let timeAccum = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.1);
+            timeAccum += dt;
+
+            controls.update(dt);
+
+            sunMat.uniforms.uTime.value = timeAccum;
+            sunGroup.rotation.y += dt * 0.0025;
+
+            const pPos = promParticles.geometry.attributes.position.array;
+            for (let i = 0; i < promCount; i++) { const d = promData[i];
+                d.life += dt * d.freq; const h = Math.abs(Math.sin(d.life + d.phase)) * d.maxH;
+                pPos[i * 3] = d.dir.x * (3.51 + h);
+                pPos[i * 3 + 1] = d.dir.y * (3.51 + h);
+                pPos[i * 3 + 2] = d.dir.z * (3.51 + h); }
+            promParticles.geometry.attributes.position.needsUpdate = true;
+
+            const cPos = corParticles.geometry.attributes.position.array;
+            for (let i = 0; i < corCount; i++) { const d = corData[i];
+                d.life += dt * (0.06 + d.speed * 0.18); const dist = d.baseR + Math.sin(d.life) * 4;
+                cPos[i * 3] = d.dir.x * Math.max(3.6, dist);
+                cPos[i * 3 + 1] = d.dir.y * Math.max(3.6, dist);
+                cPos[i * 3 + 2] = d.dir.z * Math.max(3.6, dist); }
+            corParticles.geometry.attributes.position.needsUpdate = true;
+
+            planets.forEach(p => { const d = p.userData;
+                d.angle += d.speed * dt;
+                p.position.x = Math.cos(d.angle) * d.orbit;
+                p.position.z = Math.sin(d.angle) * d.orbit;
+                p.position.y = 0; const b = p.children.find(c => c.isMesh && c.name && c.name.includes('Body')); if (b) b
+                        .rotation.y += dt * 0.08; });
+            moonGroups.forEach(({ orbit, moon }) => { const d = orbit.userData;
+                d.angle += d.speed * dt;
+                orbit.rotation.y = d.angle; if (moon) moon.rotation.y += dt * 0.12; });
+            if (earthPlanetRef) { const em = earthPlanetRef.children.find(c => c.isMesh && c.material && c.material.uniforms &&
+                    c.material.uniforms.uLightPos); if (em) em.material.uniforms.uLightPos.value.copy(sunGroup.position); const am =
+                    earthPlanetRef.children.find(c => c.name === 'atmosphere'); if (am && am.material.uniforms) am.material
+                    .uniforms.uSunPos.value.copy(sunGroup.position); }
+            planets.forEach(p => { const b = p.children.find(c => c.isMesh && c.material && c.material.uniforms && c.material
+                    .uniforms.uTime); if (b) b.material.uniforms.uTime.value = timeAccum; const ring = p.children.find(c => c
+                    .name === 'saturnRing'); if (ring && ring.material.uniforms) ring.material.uniforms.uTime.value =
+                    timeAccum; });
+            starField.rotation.y += dt * 0.0005;
+            renderer.render(scene, camera);
+        }
+
+        // ==================== 事件 ====================
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 键盘快捷键
+        window.addEventListener('keydown', (e) => {
+            switch (e.key.toLowerCase()) {
+                case 'f':
+                    switchView('earth');
+                    break;
+                case 'g':
+                    switchView('sun');
+                    break;
+                case 'r':
+                    switchView('free');
+                    break;
+                case 'a':
+                    if (controls.lockMode === 'free') controls.autoRotate = !controls.autoRotate;
+                    break;
+            }
+        });
+
+        // 初始
+        setTimeout(() => switchView('earth'), 800);
+
+        requestAnimationFrame(animate);
+        console.log('🌌 太阳系启动 - 按钮切换 + 移动端适配 + 极稳视角');
+    </script>
+</body>
+</html>
